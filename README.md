@@ -17,15 +17,3 @@ confidence interval against a chronological dev/test split, never a single numbe
     python -m patchpoint.cli index   --repo pallets/flask --sha <sha>
     python -m patchpoint.cli eval    --retriever hybrid --split dev --repo pallets/flask
     python -m patchpoint.cli compare --a hybrid --b bm25 --metric recall@10
-
-## Status
-
-- [x] Scaffold: retrievers (BM25, hashing dense, RRF hybrid), eval harness, CLI, API, CI
-- [ ] Metric definitions (`eval/metrics.py`) and their tests
-- [ ] Paired bootstrap test (`eval/bootstrap.py`)
-- [ ] Dataset build run against a real repo
-- [ ] `index` CLI command (checkout a repo at base_sha)
-- [ ] AST chunking
-- [ ] Agentic retriever (model wired in, `PRICING` populated from provider docs)
-
-See `CLAUDE.md` for the full working agreement and invariants.
