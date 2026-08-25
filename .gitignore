@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.cache/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+.DS_Store
+build/
+dist/
+
+CLAUDE.md

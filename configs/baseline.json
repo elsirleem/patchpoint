@@ -1,0 +1,10 @@
+{
+  "_note": "Placeholders until a real baseline run exists on flask. Do not lower these to make CI pass without raising it first — see CLAUDE.md invariant 6.",
+  "repo": "pallets/flask",
+  "floors": {
+    "bm25": {
+      "recall@10": 0.0,
+      "hit@10": 0.0
+    }
+  }
+}

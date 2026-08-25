@@ -1,0 +1,37 @@
+[project]
+name = "patchpoint"
+version = "0.0.1"
+description = "Rank a repo's files by how likely each is to need changing for a GitHub issue."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.6",
+    "typer>=0.12",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "numpy>=1.26,<2.3",  # 2.3+ stubs need mypy python_version>=3.12; pin until that's resolved
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["patchpoint*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["patchpoint"]
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
