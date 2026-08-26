@@ -102,12 +102,18 @@ def mine_examples(repo: str, max_examples: int = 200) -> list[IssueExample]:
             if not fix_sha:
                 continue
 
-            gold_files = _pr_files(repo, pr["number"])
-            if not gold_files:
-                continue
+            try:
+                gold_files = _pr_files(repo, pr["number"])
+                if not gold_files:
+                    continue
 
-            base_sha = _commit_parent(repo, fix_sha)
-            issue = _issue(repo, int(issue_numbers[0]))
+                base_sha = _commit_parent(repo, fix_sha)
+                issue = _issue(repo, int(issue_numbers[0]))
+            except httpx.HTTPStatusError:
+                # E.g. a merge commit that's no longer reachable after history was
+                # rewritten (squash/rebase), or an issue that was since deleted.
+                # Real git history has this kind of noise; skip the PR, don't abort.
+                continue
 
             examples.append(
                 IssueExample(
