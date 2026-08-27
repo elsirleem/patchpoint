@@ -38,11 +38,13 @@ class Dataset(BaseModel):
 
 
 class RunConfig(BaseModel):
-    """Everything needed to reproduce a single eval run."""
+    """Everything needed to reproduce a single eval run.
+
+    No single base_sha: each example is indexed at its own, see eval/harness.py.
+    """
 
     run_id: str
     repo: str
-    base_sha: str
     retriever: str
     split: str
     top_k: int = 10

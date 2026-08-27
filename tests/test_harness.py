@@ -7,6 +7,9 @@ def test_run_eval_writes_config_predictions_and_metrics(tmp_path, monkeypatch) -
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(metrics, "recall_at_k", lambda ranked, gold, k: 1.0)
     monkeypatch.setattr(metrics, "hit_at_k", lambda ranked, gold, k: 1.0)
+    monkeypatch.setattr(
+        harness, "index_repo_at_sha", lambda repo, sha: {"auth.py": "def login(): pass"}
+    )
 
     example = IssueExample(
         repo="a/b",
@@ -21,7 +24,6 @@ def test_run_eval_writes_config_predictions_and_metrics(tmp_path, monkeypatch) -
     dataset = Dataset(repo="a/b", examples=[example], dev_cutoff="2025-01-01T00:00:00Z")
 
     retriever = BM25Retriever()
-    retriever.index({"auth.py": "def login(): pass"})
 
     run_dir = harness.run_eval(retriever, dataset, "dev", "test-run", top_k=5)
 

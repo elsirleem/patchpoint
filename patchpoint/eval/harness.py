@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from patchpoint.data.checkout import index_repo_at_sha
 from patchpoint.eval import metrics
 from patchpoint.retrievers.base import Retriever
 from patchpoint.schemas import Dataset, IssueExample, Prediction, RunConfig
@@ -19,9 +20,12 @@ def run_eval(
     run_id: str,
     top_k: int = 10,
 ) -> Path:
-    """Runs `retriever` (already indexed) over `split` of `dataset`.
+    """Runs `retriever` over `split` of `dataset`.
 
-    Writes config.json, predictions.jsonl, and metrics.json to results/<run_id>/.
+    Each example is indexed fresh at its own base_sha right before it's queried —
+    a repo's file set differs across years of issues, so there's no single sha to
+    index the whole split at once (see CLAUDE.md invariant 1). Writes config.json,
+    predictions.jsonl, and metrics.json to results/<run_id>/.
     """
     examples = _split_examples(dataset, split)
 
@@ -31,7 +35,6 @@ def run_eval(
     config = RunConfig(
         run_id=run_id,
         repo=dataset.repo,
-        base_sha=examples[0].base_sha if examples else "",
         retriever=type(retriever).__name__,
         split=split,
         top_k=top_k,
@@ -43,6 +46,8 @@ def run_eval(
 
     with (run_dir / "predictions.jsonl").open("w") as f:
         for example in examples:
+            files = index_repo_at_sha(dataset.repo, example.base_sha)
+            retriever.index(files)
             ranked = retriever.query(
                 f"{example.issue_title}\n\n{example.issue_body}", top_k=top_k
             )

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import typer
 
+from patchpoint.data.checkout import index_repo_at_sha
 from patchpoint.data.dataset import build_dataset
 from patchpoint.demo_data import DEMO_FILES, DEMO_ISSUE
 from patchpoint.eval.harness import run_eval
@@ -43,8 +44,13 @@ def index(
     repo: str = typer.Option(..., help="owner/name, e.g. pallets/flask"),
     sha: str = typer.Option(..., help="base_sha to index — never HEAD"),
 ) -> None:
-    """Checkout `repo` at `sha` and cache its file contents for retrieval."""
-    raise NotImplementedError("wire up a git checkout + file read here — see CLAUDE.md status")
+    """Checkout `repo` at `sha` and cache its file contents for retrieval.
+
+    Mainly a manual/debug entry point — `eval` calls the same underlying function
+    itself, once per example, since each example has its own base_sha.
+    """
+    files = index_repo_at_sha(repo, sha)
+    typer.echo(f"indexed {len(files)} files from {repo}@{sha[:10]}")
 
 
 @app.command("eval")
