@@ -1,10 +1,10 @@
 {
-  "_note": "Placeholders until a real baseline run exists on flask. Do not lower these to make CI pass without raising it first — see CLAUDE.md invariant 6.",
+  "_note": "Set from results/bm25-dev-pallets__flask/metrics.json (n=158, recall@10=0.694, hit@10=0.899), with a buffer below the observed value so a dataset rebuild that shifts n by a few examples doesn't false-positive. This is a CI regression gate, not the statistical comparison itself — that's eval/bootstrap.py via `compare`. Do not lower these to make CI pass without raising it first — see CLAUDE.md invariant 6.",
   "repo": "pallets/flask",
   "floors": {
     "bm25": {
-      "recall@10": 0.0,
-      "hit@10": 0.0
+      "recall@10": 0.65,
+      "hit@10": 0.85
     }
   }
 }

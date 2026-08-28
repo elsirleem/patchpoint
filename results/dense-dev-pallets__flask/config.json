@@ -1,0 +1,7 @@
+{
+  "run_id": "dense-dev-pallets__flask",
+  "repo": "pallets/flask",
+  "retriever": "HashingDenseRetriever",
+  "split": "dev",
+  "top_k": 10
+}

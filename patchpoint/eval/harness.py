@@ -27,7 +27,7 @@ def run_eval(
     index the whole split at once (see CLAUDE.md invariant 1). Writes config.json,
     predictions.jsonl, and metrics.json to results/<run_id>/.
     """
-    examples = _split_examples(dataset, split)
+    examples = split_examples(dataset, split)
 
     run_dir = RESULTS_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -67,7 +67,7 @@ def run_eval(
     return run_dir
 
 
-def _split_examples(dataset: Dataset, split: str) -> list[IssueExample]:
+def split_examples(dataset: Dataset, split: str) -> list[IssueExample]:
     if split == "dev":
         return [e for e in dataset.examples if e.merged_at < dataset.dev_cutoff]
     if split == "test":

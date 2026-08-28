@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import typer
@@ -9,6 +10,7 @@ import typer
 from patchpoint.data.checkout import index_repo_at_sha
 from patchpoint.data.dataset import build_dataset
 from patchpoint.demo_data import DEMO_FILES, DEMO_ISSUE
+from patchpoint.eval.compare import compare_runs
 from patchpoint.eval.harness import run_eval
 from patchpoint.retrievers.bm25 import BM25Retriever
 from patchpoint.retrievers.dense import HashingDenseRetriever
@@ -30,9 +32,12 @@ RETRIEVERS = {
 def build(
     repo: str = typer.Option(..., help="owner/name, e.g. pallets/flask"),
     max_examples: int = typer.Option(200, "--max", help="max examples to mine"),
+    max_gold_files: int = typer.Option(
+        20, "--max-gold-files", help="drop examples touching more files than this"
+    ),
 ) -> None:
     """Mine issue/fix pairs from `repo`'s history and write a dataset file."""
-    dataset = build_dataset(repo, max_examples=max_examples)
+    dataset = build_dataset(repo, max_examples=max_examples, max_gold_files=max_gold_files)
     DATASETS_DIR.mkdir(parents=True, exist_ok=True)
     out_path = DATASETS_DIR / f"{repo.replace('/', '__')}.json"
     out_path.write_text(dataset.model_dump_json(indent=2))
@@ -76,7 +81,8 @@ def compare_cmd(
     metric: str = typer.Option("recall@10"),
 ) -> None:
     """Compare two runs' results/ with the paired bootstrap test."""
-    raise NotImplementedError("depends on eval/bootstrap.py, which is not implemented yet")
+    result = compare_runs(a, b, metric)
+    typer.echo(json.dumps(result, indent=2))
 
 
 @app.command()
