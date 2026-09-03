@@ -1,0 +1,7 @@
+{
+  "run_id": "hybrid-test-pallets__flask",
+  "repo": "pallets/flask",
+  "retriever": "RRFHybridRetriever",
+  "split": "test",
+  "top_k": 10
+}

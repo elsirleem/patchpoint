@@ -14,6 +14,7 @@ from patchpoint.eval.compare import compare_runs
 from patchpoint.eval.harness import run_eval
 from patchpoint.retrievers.bm25 import BM25Retriever
 from patchpoint.retrievers.dense import HashingDenseRetriever
+from patchpoint.retrievers.embedding import SentenceEmbeddingRetriever
 from patchpoint.retrievers.hybrid import RRFHybridRetriever
 from patchpoint.schemas import Dataset
 
@@ -21,10 +22,23 @@ app = typer.Typer(help="Rank a repo's files by how likely each is to need changi
 
 DATASETS_DIR = Path("data") / "datasets"
 
+# Real dense embeddings (sentence-transformers) — used by `eval`/`compare`. Needs
+# the `embeddings` extra installed; imported lazily inside SentenceEmbeddingRetriever
+# so importing this module (e.g. for `demo`) never requires it.
 RETRIEVERS = {
     "bm25": lambda: BM25Retriever(),
-    "dense": lambda: HashingDenseRetriever(),
-    "hybrid": lambda: RRFHybridRetriever([BM25Retriever(), HashingDenseRetriever()]),
+    "dense": lambda: SentenceEmbeddingRetriever(),
+    "hybrid": lambda: RRFHybridRetriever([BM25Retriever(), SentenceEmbeddingRetriever()]),
+}
+
+# The hashing stand-in — fast, offline, no extra dependency — kept only so `demo`
+# stays a true smoke test regardless of whether the `embeddings` extra is installed.
+_DEMO_RETRIEVERS = {
+    "bm25": lambda: BM25Retriever(),
+    "dense (offline stand-in)": lambda: HashingDenseRetriever(),
+    "hybrid (offline stand-in)": lambda: RRFHybridRetriever(
+        [BM25Retriever(), HashingDenseRetriever()]
+    ),
 }
 
 
@@ -88,7 +102,7 @@ def compare_cmd(
 @app.command()
 def demo() -> None:
     """Offline end-to-end smoke test on synthetic data. No network access required."""
-    for name, make_retriever in RETRIEVERS.items():
+    for name, make_retriever in _DEMO_RETRIEVERS.items():
         retriever = make_retriever()
         retriever.index(DEMO_FILES)
         ranked = retriever.query(DEMO_ISSUE, top_k=3)

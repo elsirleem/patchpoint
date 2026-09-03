@@ -1,7 +1,7 @@
 {
   "run_id": "dense-dev-pallets__flask",
   "repo": "pallets/flask",
-  "retriever": "HashingDenseRetriever",
+  "retriever": "SentenceEmbeddingRetriever",
   "split": "dev",
   "top_k": 10
 }
