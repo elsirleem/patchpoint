@@ -7,12 +7,15 @@ from pathlib import Path
 
 import typer
 
+from patchpoint.chunking.ast_chunk import ASTChunker
+from patchpoint.chunking.fixed_window import FixedWindowChunker
 from patchpoint.data.checkout import index_repo_at_sha
 from patchpoint.data.dataset import build_dataset
 from patchpoint.demo_data import DEMO_FILES, DEMO_ISSUE
 from patchpoint.eval.compare import compare_runs
 from patchpoint.eval.harness import run_eval
 from patchpoint.retrievers.bm25 import BM25Retriever
+from patchpoint.retrievers.chunked_embedding import ChunkedEmbeddingRetriever
 from patchpoint.retrievers.dense import HashingDenseRetriever
 from patchpoint.retrievers.embedding import SentenceEmbeddingRetriever
 from patchpoint.retrievers.hybrid import RRFHybridRetriever
@@ -29,6 +32,8 @@ RETRIEVERS = {
     "bm25": lambda: BM25Retriever(),
     "dense": lambda: SentenceEmbeddingRetriever(),
     "hybrid": lambda: RRFHybridRetriever([BM25Retriever(), SentenceEmbeddingRetriever()]),
+    "dense-fixed": lambda: ChunkedEmbeddingRetriever(FixedWindowChunker()),
+    "dense-ast": lambda: ChunkedEmbeddingRetriever(ASTChunker()),
 }
 
 # The hashing stand-in — fast, offline, no extra dependency — kept only so `demo`

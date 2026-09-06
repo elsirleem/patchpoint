@@ -61,6 +61,43 @@ retriever used by itself. An earlier run with a hashing-based embedding stand-in
 no longer holds once the embeddings are real, which is itself worth noting as a caution about
 trusting a fusion result built on a weak or fake second signal.
 
+## Chunking
+
+Whole-file embedding truncates anything past the model's max sequence length, so files were
+split before embedding and scored by their best-matching chunk (max over chunks, per file) —
+see `retrievers/chunked_embedding.py`. Two chunkers were compared: fixed-size line windows
+(`chunking/fixed_window.py`) and one chunk per top-level function/class
+(`chunking/ast_chunk.py`, falling back to fixed-window for non-Python files or parse failures).
+
+**Dev (n=158):**
+
+| retriever | recall@10 | hit@10 |
+|---|---|---|
+| dense-fixed (chunked, fixed-window) | 0.706 | 0.899 |
+| dense-ast (chunked, AST) | 0.629 | 0.873 |
+| dense (whole-file, no chunking) | 0.451 | 0.690 |
+
+| comparison | metric | diff | 95% CI | p |
+|---|---|---|---|---|
+| dense-fixed vs dense (whole-file) | recall@10 | +0.255 | [0.198, 0.314] | ≈0 |
+| dense-fixed vs dense-ast | recall@10 | +0.077 | [0.038, 0.117] | 0.0002 |
+| dense-fixed vs dense-ast | hit@10 | +0.025 | [-0.013, 0.063] | 0.26 (n.s.) |
+| dense-fixed vs bm25 | recall@10 | +0.012 | [-0.047, 0.069] | 0.70 (n.s.) |
+
+Chunking at all is an unambiguous win over embedding whole files. Between the two chunkers,
+**fixed-window beats AST chunking on recall@10** — the opposite of what was originally assumed
+here (see git history). This isn't a truncation story: AST chunks are actually smaller on
+average (median 875 vs 1998 characters) and less often exceed the model's ~256-token limit (48%
+of chunks vs 89%, sampled directly from the flask checkout). The best-grounded hypothesis is
+that AST chunking produced more, smaller chunks per file (181 vs 120 across the `.py` files
+sampled) — under max-score aggregation, more independent chunks per file means more chances for
+one small, low-context chunk to score spuriously high, adding noise to the ranking. That's a
+hypothesis supported by the chunk-count numbers, not a proven mechanism.
+
+The other headline: chunked dense embeddings alone are now statistically tied with bm25
+(p=0.70) — a real embedding retriever matching the classical baseline, once it isn't crippled
+by silent truncation.
+
 ## Failure taxonomy
 
 Grounded in the actual bm25 predictions rather than guessed categories — every example cited
@@ -100,8 +137,10 @@ entirely; patterns below, roughly in order of frequency:
 Deliberately out of scope for now, not overlooked:
 
 - **Agentic retriever** (`retrievers/agentic.py`) — structure only; needs a real model wired
-  in and `PRICING` populated from verified provider docs before use.
-- **AST-aware chunking** (`chunking/ast_chunk.py`) — currently a stub; `chunking/fixed_window.py`
-  exists but isn't wired into any retriever yet, and neither is used today (both retrievers
-  embed/index whole files).
+  in and `PRICING` populated from verified provider docs before use. Also needs a real design
+  decision the other retrievers didn't: an agent picks files rather than scoring all of them,
+  so mapping that onto the existing `top_k`/`ScoredFile` interface isn't free.
+- **`hybrid` still fuses bm25 with the whole-file embedding retriever**, not the (stronger,
+  chunked) `dense-fixed` — the chunking comparison above happened after `hybrid` was wired up,
+  and re-running that fusion with the better dense signal hasn't been done yet.
 - **A second repository** — only `pallets/flask` has been evaluated so far.

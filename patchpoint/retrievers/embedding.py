@@ -6,10 +6,10 @@ transformers is an optional dependency (the `embeddings` extra) so `make demo`
 stays offline and dependency-free; the model is imported lazily, only when this
 retriever is actually used.
 
-Files are embedded whole, not chunked — chunking isn't wired in yet (see
-chunking/), so a file longer than the model's max sequence length is silently
-truncated by sentence-transformers itself. That's a known limitation, not an
-oversight; revisit once chunking is integrated.
+Files are embedded whole here, not chunked — a file longer than the model's max
+sequence length is silently truncated by sentence-transformers itself. See
+retrievers/chunked_embedding.py for the chunked variant, which this module's
+embed_many/cosine_scores are shared with.
 
 Embeddings are cached to disk per (model, text), keyed by content hash. A local
 model has no API cost, but still costs real compute time across dozens of eval
@@ -48,7 +48,7 @@ def _cache_path(text: str) -> Path:
     return _CACHE_DIR / f"{key}.json"
 
 
-def _embed_many(texts: list[str]) -> np.ndarray:
+def embed_many(texts: list[str]) -> np.ndarray:
     """Embeds `texts`, reusing cached vectors and batch-encoding the rest."""
     vectors_by_index: dict[int, list[float]] = {}
     to_encode: list[str] = []
@@ -73,6 +73,19 @@ def _embed_many(texts: list[str]) -> np.ndarray:
     return np.array([vectors_by_index[i] for i in range(len(texts))])
 
 
+def cosine_scores(embeddings: np.ndarray, query_vec: np.ndarray) -> np.ndarray:
+    """embeddings @ query_vec, for unit-normalized vectors (so this is cosine similarity).
+
+    OpenBLAS spuriously raises divide-by-zero/overflow/invalid-value FPE warnings
+    on some matrix shapes here even though inputs are unit-norm and the output
+    has no NaN/Inf — verified directly, not assumed. Known OpenBLAS quirk, not a
+    data bug; suppressed rather than left as noise.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        return embeddings @ query_vec
+
+
 class SentenceEmbeddingRetriever(Retriever):
     def __init__(self) -> None:
         self._paths: list[str] = []
@@ -81,19 +94,13 @@ class SentenceEmbeddingRetriever(Retriever):
     def index(self, files: dict[str, str]) -> None:
         self._paths = list(files.keys())
         self._embeddings = (
-            _embed_many([files[p] for p in self._paths]) if self._paths else np.zeros((0, 0))
+            embed_many([files[p] for p in self._paths]) if self._paths else np.zeros((0, 0))
         )
 
     def query(self, issue_text: str, top_k: int = 10) -> list[ScoredFile]:
         if not self._paths:
             return []
-        query_vec = _embed_many([issue_text])[0]
-        # OpenBLAS spuriously raises divide-by-zero/overflow/invalid-value FPE
-        # warnings on some matrix shapes here even though inputs are unit-norm
-        # and the output has no NaN/Inf — verified directly, not assumed. Known
-        # OpenBLAS quirk, not a data bug; suppressed rather than left as noise.
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            scores = self._embeddings @ query_vec
+        query_vec = embed_many([issue_text])[0]
+        scores = cosine_scores(self._embeddings, query_vec)
         ranked = sorted(zip(self._paths, scores.tolist()), key=lambda x: x[1], reverse=True)
         return [ScoredFile(path=p, score=s) for p, s in ranked[:top_k]]

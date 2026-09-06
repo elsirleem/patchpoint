@@ -1,0 +1,7 @@
+{
+  "run_id": "dense-fixed-dev-pallets__flask",
+  "repo": "pallets/flask",
+  "retriever": "ChunkedEmbeddingRetriever",
+  "split": "dev",
+  "top_k": 10
+}
