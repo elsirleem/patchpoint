@@ -14,6 +14,7 @@ from patchpoint.data.dataset import build_dataset
 from patchpoint.demo_data import DEMO_FILES, DEMO_ISSUE
 from patchpoint.eval.compare import compare_runs
 from patchpoint.eval.harness import run_eval
+from patchpoint.retrievers.agentic import AgenticRetriever
 from patchpoint.retrievers.bm25 import BM25Retriever
 from patchpoint.retrievers.chunked_embedding import ChunkedEmbeddingRetriever
 from patchpoint.retrievers.dense import HashingDenseRetriever
@@ -34,6 +35,9 @@ RETRIEVERS = {
     "hybrid": lambda: RRFHybridRetriever([BM25Retriever(), SentenceEmbeddingRetriever()]),
     "dense-fixed": lambda: ChunkedEmbeddingRetriever(FixedWindowChunker()),
     "dense-ast": lambda: ChunkedEmbeddingRetriever(ASTChunker()),
+    # Needs the `agentic` extra and Anthropic credentials. Costs real money per
+    # call — see retrievers/agentic.py's cost_usd() and cache.
+    "agentic": lambda: AgenticRetriever(),
 }
 
 # The hashing stand-in — fast, offline, no extra dependency — kept only so `demo`
@@ -83,13 +87,20 @@ def eval_cmd(
     split: str = typer.Option("dev", help="'dev' or 'test' — test is touched once, at the end"),
     repo: str = typer.Option(..., help="owner/name, e.g. pallets/flask"),
     top_k: int = 10,
+    limit: int | None = typer.Option(
+        None,
+        "--limit",
+        help="only run the first N examples — a cheap prototype, not a reportable result",
+    ),
 ) -> None:
     """Run a retriever over a dataset split and write results/<run_id>/."""
     dataset_path = DATASETS_DIR / f"{repo.replace('/', '__')}.json"
     dataset = Dataset.model_validate_json(dataset_path.read_text())
 
     run_id = f"{retriever}-{split}-{dataset.repo.replace('/', '__')}"
-    run_dir = run_eval(RETRIEVERS[retriever](), dataset, split, run_id, top_k=top_k)
+    if limit is not None:
+        run_id += f"-sample{limit}"
+    run_dir = run_eval(RETRIEVERS[retriever](), dataset, split, run_id, top_k=top_k, limit=limit)
     typer.echo(f"wrote results to {run_dir}")
 
 

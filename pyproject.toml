@@ -21,6 +21,9 @@ dev = [
 embeddings = [
     "sentence-transformers>=3.0",
 ]
+agentic = [
+    "anthropic>=0.40",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

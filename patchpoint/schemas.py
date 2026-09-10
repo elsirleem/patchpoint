@@ -48,6 +48,9 @@ class RunConfig(BaseModel):
     retriever: str
     split: str
     top_k: int = 10
+    limit: int | None = None
+    """Set when this run only covers the first N examples of the split — a cheap
+    prototype, not a reportable result. None means the full split ran."""
 
 
 class Prediction(BaseModel):
