@@ -32,7 +32,12 @@ DATASETS_DIR = Path("data") / "datasets"
 RETRIEVERS = {
     "bm25": lambda: BM25Retriever(),
     "dense": lambda: SentenceEmbeddingRetriever(),
-    "hybrid": lambda: RRFHybridRetriever([BM25Retriever(), SentenceEmbeddingRetriever()]),
+    # Fused with the chunked dense retriever, not the whole-file one — measured
+    # clearly stronger (see README's Chunking section) and this is meant to be
+    # the best combination found, not just "bm25 + whichever dense came first".
+    "hybrid": lambda: RRFHybridRetriever(
+        [BM25Retriever(), ChunkedEmbeddingRetriever(FixedWindowChunker())]
+    ),
     "dense-fixed": lambda: ChunkedEmbeddingRetriever(FixedWindowChunker()),
     "dense-ast": lambda: ChunkedEmbeddingRetriever(ASTChunker()),
     # Needs the `agentic` extra and Anthropic credentials. Costs real money per

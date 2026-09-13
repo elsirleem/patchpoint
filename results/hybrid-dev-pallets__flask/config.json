@@ -3,5 +3,6 @@
   "repo": "pallets/flask",
   "retriever": "RRFHybridRetriever",
   "split": "dev",
-  "top_k": 10
+  "top_k": 10,
+  "limit": null
 }

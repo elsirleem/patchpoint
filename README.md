@@ -29,37 +29,39 @@ of that size; see `data/dataset.py`.
 
 | retriever | recall@10 | hit@10 |
 |---|---|---|
+| hybrid (bm25 + chunked dense, RRF) | 0.764 | 0.949 |
 | bm25 | 0.694 | 0.899 |
-| hybrid (bm25 + embeddings, RRF) | 0.687 | 0.937 |
-| dense (embeddings only) | 0.451 | 0.690 |
+| dense (whole-file, no chunking) | 0.451 | 0.690 |
 
 **Test (n=41, evaluated once, at the end):**
 
 | retriever | recall@10 | hit@10 |
 |---|---|---|
+| hybrid | 0.748 | 0.951 |
 | bm25 | 0.712 | 0.927 |
-| hybrid | 0.597 | 0.829 |
 
-**Paired bootstrap comparisons** (`eval/bootstrap.py`, 10,000 resamples):
+**Paired bootstrap comparisons** (`eval/bootstrap.py`, 10,000 resamples). diff is the first
+system minus the second — negative means the second (right-hand) system scored higher:
 
 | comparison | split | metric | diff | 95% CI | p |
 |---|---|---|---|---|---|
-| bm25 vs hybrid | dev | recall@10 | +0.007 | [-0.045, 0.059] | 0.79 (n.s.) |
-| bm25 vs hybrid | dev | hit@10 | -0.038 | [-0.095, 0.013] | 0.20 (n.s.) |
-| bm25 vs hybrid | test | recall@10 | +0.132 | [0.037, 0.231] | 0.006 |
-| bm25 vs hybrid | test | hit@10 | +0.103 | [0.000, 0.231] | 0.11 (n.s.) |
-| bm25 vs dense | dev | recall@10 | +0.244 | [0.171, 0.314] | ≈0 |
-| hybrid vs dense | dev | recall@10 | +0.236 | [0.183, 0.293] | ≈0 |
+| bm25 vs hybrid | dev | recall@10 | -0.070 | [-0.114, -0.026] | 0.002 |
+| bm25 vs hybrid | dev | hit@10 | -0.051 | [-0.095, -0.006] | 0.038 |
+| bm25 vs hybrid | test | recall@10 | -0.032 | [-0.130, 0.071] | 0.49 (n.s.) |
+| bm25 vs hybrid | test | hit@10 | -0.026 | [-0.128, 0.077] | 0.81 (n.s.) |
+| dense-fixed (chunked, alone) vs hybrid | dev | recall@10 | -0.058 | [-0.102, -0.017] | 0.006 |
+| bm25 vs dense (whole-file, alone) | dev | recall@10 | +0.244 | [0.171, 0.314] | ≈0 |
 
-**Reading it honestly**: bm25 and the RRF hybrid are statistically indistinguishable on dev.
-On test, bm25 pulls ahead on recall@10 — a real, significant difference, not noise dressed up
-as a finding, though test's smaller n (41 vs 158) means it carries a wider CI and less
-certainty than the dev result. Both splits agree on the part that matters: fusing in dense
-embeddings does not reliably beat bm25 alone on this dataset, and both clearly beat the dense
-retriever used by itself. An earlier run with a hashing-based embedding stand-in (see
-`retrievers/dense.py`) showed hybrid losing to bm25 by a wide, significant margin — that result
-no longer holds once the embeddings are real, which is itself worth noting as a caution about
-trusting a fusion result built on a weak or fake second signal.
+**Reading it honestly**: once dense embeddings are both real and chunked, hybrid (bm25 + chunked
+dense, RRF) is the strongest approach measured — it significantly beats bm25 alone on both dev
+metrics, and beats chunked dense alone too, so the fusion is adding something neither signal has
+by itself. The improvement's direction holds on test (0.748 vs 0.712 recall@10) but isn't
+statistically significant there — test's n=41 is a third of dev's, so a real effect this size
+can still land inside a wide CI. This result has moved twice as the dense signal improved: a
+hashing-based stand-in made hybrid lose to bm25 by a wide margin; whole-file real embeddings made
+the two statistically indistinguishable; chunked real embeddings made hybrid clearly the
+strongest of the three. The lesson isn't really about RRF — a fusion result is only as
+trustworthy as its weakest input signal.
 
 ## Chunking
 
@@ -136,11 +138,7 @@ entirely; patterns below, roughly in order of frequency:
 
 Deliberately out of scope for now, not overlooked:
 
-- **Agentic retriever** (`retrievers/agentic.py`) — structure only; needs a real model wired
-  in and `PRICING` populated from verified provider docs before use. Also needs a real design
-  decision the other retrievers didn't: an agent picks files rather than scoring all of them,
-  so mapping that onto the existing `top_k`/`ScoredFile` interface isn't free.
-- **`hybrid` still fuses bm25 with the whole-file embedding retriever**, not the (stronger,
-  chunked) `dense-fixed` — the chunking comparison above happened after `hybrid` was wired up,
-  and re-running that fusion with the better dense signal hasn't been done yet.
+- **Agentic retriever** (`retrievers/agentic.py`) — a real multi-turn tool-use loop (read_file,
+  grep, submit_answer) with cost tracking and per-call caching is built and tested, but hasn't
+  run against real data yet — needs an Anthropic API key.
 - **A second repository** — only `pallets/flask` has been evaluated so far.
